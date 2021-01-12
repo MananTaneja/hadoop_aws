@@ -1,0 +1,1 @@
+Food.csv path - /hom/hduser/hadoop_aws/food.csv
