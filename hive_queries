@@ -1,0 +1,97 @@
+rm -rf metastore_db
+
+schematool -dbType derby -initSchema
+
+***************************************************
+
+create table if not exists food (
+
+id int,
+
+adm0_id int,
+
+adm0_name string ,
+
+adm1_id int ,
+
+adm1_name string ,
+
+mkt_id int,
+
+mkt_name string ,
+
+cm_id int,
+
+cm_name string,
+
+cur_id int,
+
+cur_name string,
+
+pt_id int,
+
+pt_name string,
+
+noofunits int,
+
+um_name string ,
+
+mp_month int,
+
+mp_year int,
+
+mp_price float,
+
+mp_commoditysource string)
+
+row format
+
+delimited fields terminated by ‘,’
+
+lines terminated by '\n';
+
+*************************************************
+
+LOAD DATA LOCAL INPATH '/home/hduser/food.csv' OVERWRITE INTO TABLE food;
+
+*************************************************
+
+select * from food limit 5;
+
+SELECT avg(noofunits) FROM food;
+
+select mp_year, count(mp year) from food group by mp_year;
+
+select amt from (select noofunits*mp_price as amt from food) t2;
+
+select sum(amt) from (select noofunits*mp_price as amt from food) t2;
+
+**********************************************************************
+
+CREATE TABLE IF NOT EXISTS STATIC_PART_food (id INT, adm0_name STRING) PARTITIONED BY (mp_year INT) ROW FORMAT DELIMITED FIELDS TERMINATED BY ',';
+
+insert overwrite table static_part_food partition(mp_year=2014) select id,adm0_name from food where mp_year = 2014;
+
+select * from static_part_food;
+
+*************************************************************************
+
+CREATE TABLE IF NOT EXISTS dynamic_PART_food (adm0_id INT, adm0_name STRING) PARTITIONED BY (mp_year INT) ROW FORMAT DELIMITED FIELDS TERMINATED BY ',';
+
+SET hive.exec.dynamic.partition = true;
+
+SET hive.exec.dynamic.partition.mode = nonstrict;
+
+INSERT OVERWRITE TABLE dynamic_part_food PARTITION (mp_year)SELECT adm0_id,adm0_name,mp_year from food;
+
+select * from dynamic_part_food;
+
+****************************************************************************
+
+CREATE TABLE IF NOT EXISTS food_bucket(adm0_id INT,adm0_name STRING,mp_year int)CLUSTERED BY(mp_year) into 3 buckets;
+
+FROM food INSERT OVERWRITE TABLE food_bucket select adm0_id, adm0_name, mp_year;
+
+SELECT DISTINCT mp_year FROM food_BUCKET TABLESAMPLE(BUCKET 1 OUT OF 3 ON mp_year);
+
+
